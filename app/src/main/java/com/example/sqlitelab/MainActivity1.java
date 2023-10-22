@@ -14,87 +14,55 @@ import android.widget.TextView;
 import com.google.android.material.snackbar.Snackbar;
 
 import java.util.List;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 public class MainActivity1 extends AppCompatActivity {
 
-    TextView t1;
-    EditText e1;
-    Button b1,b2;
-
-
+    EditText e1,e2;
+    Button b1;
+    User users;
+    AppDatabase database;
+    UserDao userDao;
+    private Executor executor= Executors.newSingleThreadExecutor();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main1);
 
-        t1=findViewById(R.id.txtUser);
+        database=AppDatabase.getInstance(this);
+        userDao=database.userDao();
+
         e1=findViewById(R.id.txtModify1);
+        e2=findViewById(R.id.txtModifyUser);
         b1=findViewById(R.id.btnUpdate);
-        b2=findViewById(R.id.btnDelete);
+
 
 
         Intent intent = getIntent();
-        List<User> users = (List<User>) intent.getSerializableExtra("userList");
+        users = (User) getIntent().getSerializableExtra("user");
 
-
-        TextView textView = findViewById(R.id.txtUser);
-
-        StringBuilder userNames = new StringBuilder();
-        for (User user : users) {
-            userNames.append(user.getUid()+" "+user.getFirstName()+" "+user.getLastName()).append("\n");
-        }
-
-        textView.setText(userNames.toString());
+        e1.setText(users.getFirstName());
+        e2.setText(users.getLastName());
 
         b1.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                new bgThread().start();
+                executor.execute(()->{
+                    User userUpdated=userDao.getById(users.getUid());
+                    userUpdated.setFirstName(e1.getText().toString());
+                    userUpdated.setLastName(e2.getText().toString());
+                    userDao.update(userUpdated);
+                    finish();
+                });
+
             }
         });
 
     }
 
-    class bgThread extends Thread{
-        @Override
-        public void run(){
-            super.run();
 
-
-            String userId=e1.getText().toString();
-            if(!userId.isEmpty()){
-                try{
-                    int user=Integer.parseInt(userId);
-                    deleteUserById(user);
-
-                }catch (NumberFormatException e){
-                    e.printStackTrace();
-                }
-            }else{
-
-            }
-
-        }
-    }
-
-    private void deleteUserById(int userId){
-        AppDatabase db = Room.databaseBuilder(getApplicationContext(),
-                AppDatabase.class, "roomDb").build();
-
-        UserDao userDao = db.userDao();
-
-        // Delete the user by ID
-        userDao.delete(userId);
-        View parentView=findViewById(R.id.activitymain1);
-        Snackbar snackbar= Snackbar.make(parentView,"User deleted successfully", Snackbar.LENGTH_SHORT);
-        snackbar.show();
-
-    }
-
-    private void updateName(String name){
-
-    }
 
 
 }
